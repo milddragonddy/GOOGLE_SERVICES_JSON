@@ -78,6 +78,7 @@ import com.example.ui.theme.CalmGreen
 import com.example.ui.theme.CautionAmber
 import com.example.ui.viewmodel.LiveMonitorState
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 @Composable
@@ -91,7 +92,7 @@ fun MonitorScreen(
     onThresholdChange: (Int) -> Unit,
     onToggleAutoGuard: (Boolean) -> Unit,
     onCaptureSnapshot: () -> Unit,
-    onDeleteLog: (String) -> Unit,
+    onDeleteLog: (Long) -> Unit,
     onReportNoiseClick: (measuredDb: Int, peakDb: Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -572,7 +573,7 @@ private fun NoiseLogCard(
     onDelete: () -> Unit
 ) {
     val formatter = remember { SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()) }
-    val timeText = log.createdAt?.toDate()?.let { formatter.format(it) } ?: "Just now"
+    val timeText = formatter.format(Date(log.createdAtMillis))
     val isHigh = log.peakDb >= log.thresholdDb
 
     Card(

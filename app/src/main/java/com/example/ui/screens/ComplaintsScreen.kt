@@ -84,8 +84,8 @@ fun ComplaintsScreen(
         description: String,
         onDone: () -> Unit
     ) -> Unit,
-    onUpdateStatus: (complaintId: String, status: ComplaintStatus, responseNote: String?) -> Unit,
-    onDeleteComplaint: (String) -> Unit,
+    onUpdateStatus: (complaintId: Long, status: ComplaintStatus, responseNote: String?) -> Unit,
+    onDeleteComplaint: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -115,7 +115,7 @@ fun ComplaintsScreen(
                             style = MaterialTheme.typography.titleLarge
                         )
                         Text(
-                            text = "သတ်မှတ် dB ကျော်လွန်နေသော ဆောင်းဘောက်နှင့် ဆူညံသံများကို သက်သေမှတ်တမ်းဖြင့် တင်သွင်းသိမ်းဆည်းပြီး သက်ဆိုင်ရာသို့ Share ပေးပို့နိုင်ပါသည်။",
+                            text = "သတ်မှတ် dB ကျော်လွန်နေသော ဆောင်းဘောက်နှင့် ဆူညံသံများကို သက်သေမှတ်တမ်းဖြင့် စက်ထဲတွင်သိမ်းဆည်းပြီး သက်ဆိုင်ရာသို့ Share ပေးပို့နိုင်ပါသည်။",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -286,9 +286,7 @@ private fun ComplaintCard(
     onDelete: () -> Unit
 ) {
     val formatter = remember { SimpleDateFormat("MMM d, yyyy HH:mm", Locale.getDefault()) }
-    val displayDate = (complaint.updatedAt ?: complaint.createdAt)?.toDate()?.let {
-        formatter.format(it)
-    } ?: "Just now"
+    val displayDate = formatter.format(Date(complaint.updatedAtMillis))
 
     val severityColor = when (complaint.severityEnum) {
         NoiseSeverity.CRITICAL -> AlertCrimson
@@ -579,7 +577,7 @@ private fun CreateComplaintDialog(
 
 private fun buildShareReportText(complaint: NoiseComplaint): String {
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    val dateStr = formatter.format((complaint.createdAt?.toDate()) ?: Date())
+    val dateStr = formatter.format(Date(complaint.createdAtMillis))
     return buildString {
         appendLine("📢 ဆေးရုံနှင့် ကျန်းမာရေးဌာန ဆူညံသံတိုင်ကြားစာ (Hospital Quiet-Zone Report)")
         appendLine("━━━━━━━━━━━━━━━━━━━━")

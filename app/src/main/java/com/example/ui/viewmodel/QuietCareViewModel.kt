@@ -15,7 +15,6 @@ import com.example.data.model.UiState
 import com.example.data.preferences.QuietPreferences
 import com.example.data.preferences.QuietSettingsStore
 import com.example.data.repository.NoiseRepository
-import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,9 +41,7 @@ class QuietCareViewModel(
     private val repository: NoiseRepository,
     private val settingsStore: QuietSettingsStore,
     private val speakerControlManager: SpeakerControlManager,
-    private val decibelEngine: DecibelMonitorEngine,
-    private val currentUserId: String,
-    val currentUserDisplayName: String
+    private val decibelEngine: DecibelMonitorEngine
 ) : ViewModel() {
 
     val preferences: StateFlow<QuietPreferences> = settingsStore.preferences
@@ -55,16 +52,12 @@ class QuietCareViewModel(
         )
 
     val complaintsState: StateFlow<UiState<List<NoiseComplaint>>> =
-        repository.observeComplaints(currentUserId)
+        repository.observeComplaints()
             .map<List<NoiseComplaint>, UiState<List<NoiseComplaint>>> { UiState.Success(it) }
             .catch { error ->
-                val firestoreError = generateSequence(error) { it.cause }
-                    .filterIsInstance<FirebaseFirestoreException>()
-                    .firstOrNull()
-                if (firestoreError == null && error is CancellationException) throw error
-                val rootError = firestoreError ?: error
-                Log.w(TAG, "Error observing complaints", rootError)
-                emit(UiState.Error(rootError.localizedMessage ?: "Failed to load complaints"))
+                if (error is CancellationException) throw error
+                Log.w(TAG, "Error observing complaints", error)
+                emit(UiState.Error(error.localizedMessage ?: "Failed to load complaints"))
             }
             .stateIn(
                 scope = viewModelScope,
@@ -73,16 +66,12 @@ class QuietCareViewModel(
             )
 
     val noiseLogsState: StateFlow<UiState<List<NoiseLog>>> =
-        repository.observeNoiseLogs(currentUserId)
+        repository.observeNoiseLogs()
             .map<List<NoiseLog>, UiState<List<NoiseLog>>> { UiState.Success(it) }
             .catch { error ->
-                val firestoreError = generateSequence(error) { it.cause }
-                    .filterIsInstance<FirebaseFirestoreException>()
-                    .firstOrNull()
-                if (firestoreError == null && error is CancellationException) throw error
-                val rootError = firestoreError ?: error
-                Log.w(TAG, "Error observing noise logs", rootError)
-                emit(UiState.Error(rootError.localizedMessage ?: "Failed to load noise logs"))
+                if (error is CancellationException) throw error
+                Log.w(TAG, "Error observing noise logs", error)
+                emit(UiState.Error(error.localizedMessage ?: "Failed to load noise logs"))
             }
             .stateIn(
                 scope = viewModelScope,
@@ -195,13 +184,13 @@ class QuietCareViewModel(
                 autoGuarded = prefs.autoGuardEnabled
             )
             _bannerMessage.value = result.fold(
-                onSuccess = { "ဆူညံသံမှတ်တမ်း ($peak dB) ကို Cloud တွင် သိမ်းဆည်းပြီးပါပြီ" },
+                onSuccess = { "ဆူညံသံမှတ်တမ်း ($peak dB) ကို စက်ထဲတွင် သိမ်းဆည်းပြီးပါပြီ" },
                 onFailure = { err -> err.localizedMessage ?: "Failed to save log" }
             )
         }
     }
 
-    fun deleteNoiseLog(logId: String) {
+    fun deleteNoiseLog(logId: Long) {
         viewModelScope.launch {
             repository.deleteNoiseLog(logId).onFailure { err ->
                 _bannerMessage.value = err.localizedMessage ?: "Failed to delete log"
@@ -289,7 +278,7 @@ class QuietCareViewModel(
     }
 
     fun updateComplaintStatus(
-        complaintId: String,
+        complaintId: Long,
         newStatus: ComplaintStatus,
         authorityResponse: String?
     ) {
@@ -301,7 +290,7 @@ class QuietCareViewModel(
         }
     }
 
-    fun deleteComplaint(complaintId: String) {
+    fun deleteComplaint(complaintId: Long) {
         viewModelScope.launch {
             repository.deleteComplaint(complaintId).onFailure { err ->
                 _bannerMessage.value = err.localizedMessage ?: "Failed to delete complaint"

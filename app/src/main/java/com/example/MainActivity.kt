@@ -30,22 +30,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,10 +53,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.audio.DecibelMonitorEngine
 import com.example.audio.SpeakerControlManager
-import com.example.auth.attemptAutoSignIn
 import com.example.data.preferences.QuietSettingsStore
 import com.example.data.repository.NoiseRepository
-import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.ComplaintsScreen
 import com.example.ui.screens.DraftComplaintPrefill
 import com.example.ui.screens.GuideScreen
@@ -69,10 +62,6 @@ import com.example.ui.screens.MonitorScreen
 import com.example.ui.screens.SpeakersScreen
 import com.example.ui.theme.QuietCareTheme
 import com.example.ui.viewmodel.QuietCareViewModel
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
 
 object Routes {
     const val MONITOR = "monitor"
@@ -94,79 +83,26 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             QuietCareTheme {
-                AppContent()
+                MainShell()
             }
-        }
-    }
-}
-
-@Composable
-fun AppContent(auth: FirebaseAuth = Firebase.auth) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var currentUser by remember { mutableStateOf(auth.currentUser) }
-
-    DisposableEffect(auth) {
-        val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
-            currentUser = firebaseAuth.currentUser
-        }
-        auth.addAuthStateListener(listener)
-        onDispose { auth.removeAuthStateListener(listener) }
-    }
-
-    LaunchedEffect(Unit) {
-        if (auth.currentUser == null) {
-            val credentialManager = CredentialManager.create(context)
-            attemptAutoSignIn(
-                context = context,
-                credentialManager = credentialManager,
-                onAuthSuccess = { currentUser = auth.currentUser },
-                onUnauthenticated = {},
-                scope = scope
-            )
-        }
-    }
-
-    val user = currentUser
-    if (user == null) {
-        AuthScreen(onAuthSuccess = { currentUser = auth.currentUser })
-    } else {
-        val uid = user.uid
-        key(uid) {
-            MainShell(
-                currentUserId = uid,
-                userName = user.displayName ?: user.email ?: "Healthcare Staff",
-                userEmail = user.email,
-                onSignedOut = { currentUser = auth.currentUser }
-            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainShell(
-    currentUserId: String,
-    userName: String,
-    userEmail: String?,
-    onSignedOut: () -> Unit
-) {
+private fun MainShell() {
     val viewModel: QuietCareViewModel = viewModel(
-        key = currentUserId,
         factory = viewModelFactory {
             initializer {
                 val app = checkNotNull(this[APPLICATION_KEY]) {
                     "APPLICATION_KEY missing from CreationExtras"
                 }
-                val databaseId = app.getString(R.string.firestore_database_id)
-                val db = FirebaseFirestore.getInstance(databaseId)
                 QuietCareViewModel(
-                    repository = NoiseRepository(db),
+                    repository = NoiseRepository(app),
                     settingsStore = QuietSettingsStore(app),
                     speakerControlManager = SpeakerControlManager(app),
-                    decibelEngine = DecibelMonitorEngine(),
-                    currentUserId = currentUserId,
-                    currentUserDisplayName = userName
+                    decibelEngine = DecibelMonitorEngine()
                 )
             }
         }
@@ -321,7 +257,7 @@ private fun MainShell(
                         composable(Routes.COMPLAINTS) {
                             ComplaintsScreen(
                                 complaintsState = complaintsState,
-                                defaultReporterName = userName,
+                                defaultReporterName = "Healthcare Staff / Citizen",
                                 defaultFacilityName = preferences.defaultFacilityName,
                                 prefill = complaintPrefill,
                                 onClearPrefill = { complaintPrefill = null },
@@ -331,11 +267,7 @@ private fun MainShell(
                             )
                         }
                         composable(Routes.GUIDE) {
-                            GuideScreen(
-                                userEmail = userEmail,
-                                userName = userName,
-                                onSignedOut = onSignedOut
-                            )
+                            GuideScreen()
                         }
                     }
                 }

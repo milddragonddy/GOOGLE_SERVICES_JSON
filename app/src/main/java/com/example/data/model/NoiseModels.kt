@@ -1,10 +1,7 @@
 package com.example.data.model
 
-import androidx.annotation.Keep
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.DocumentId
-import com.google.firebase.firestore.IgnoreExtraProperties
-import com.google.firebase.firestore.ServerTimestamp
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 enum class NoiseSourceType(val labelMm: String, val labelEn: String) {
     LOUDSPEAKER("ဆောင်းဘောက် / စပီကာ", "Loudspeaker / Soundbox"),
@@ -53,39 +50,35 @@ enum class QuietZonePreset(val labelMm: String, val labelEn: String, val thresho
     PERIMETER("ဆေးရုံဝင်းပြင်ပ", "Hospital Perimeter", 65)
 }
 
-@Keep
-@IgnoreExtraProperties
+@Entity(tableName = "noise_complaints")
 data class NoiseComplaint(
-    @DocumentId val id: String = "",
-    val userId: String = "",
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val reporterName: String = "",
     val facilityName: String = "",
     val sourceType: String = NoiseSourceType.LOUDSPEAKER.name,
-    val measuredDb: Long = 0L,
-    val peakDb: Long = 0L,
+    val measuredDb: Int = 0,
+    val peakDb: Int = 0,
     val severity: String = NoiseSeverity.HIGH.name,
     val status: String = ComplaintStatus.SUBMITTED.name,
     val description: String = "",
     val authorityResponse: String? = null,
-    @ServerTimestamp val createdAt: Timestamp? = null,
-    @ServerTimestamp val updatedAt: Timestamp? = null
+    val createdAtMillis: Long = System.currentTimeMillis(),
+    val updatedAtMillis: Long = System.currentTimeMillis()
 ) {
     val sourceEnum: NoiseSourceType get() = NoiseSourceType.fromRaw(sourceType)
     val severityEnum: NoiseSeverity get() = NoiseSeverity.fromRaw(severity)
     val statusEnum: ComplaintStatus get() = ComplaintStatus.fromRaw(status)
 }
 
-@Keep
-@IgnoreExtraProperties
+@Entity(tableName = "noise_logs")
 data class NoiseLog(
-    @DocumentId val id: String = "",
-    val userId: String = "",
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val zoneName: String = "",
-    val avgDb: Long = 0L,
-    val peakDb: Long = 0L,
-    val thresholdDb: Long = 45L,
+    val avgDb: Int = 0,
+    val peakDb: Int = 0,
+    val thresholdDb: Int = 45,
     val autoGuarded: Boolean = false,
-    @ServerTimestamp val createdAt: Timestamp? = null
+    val createdAtMillis: Long = System.currentTimeMillis()
 )
 
 sealed interface UiState<out T> {
