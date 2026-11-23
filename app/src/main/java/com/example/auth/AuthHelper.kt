@@ -99,7 +99,7 @@ fun onGoogleSignInClicked(
     onAuthSuccess: () -> Unit,
     onAuthError: (String) -> Unit,
     scope: CoroutineScope,
-    onAuthCancelled: () -> Unit = {}
+    onAuthCancelled: (String?) -> Unit = {}
 ) {
     val clientId = try {
         context.getString(R.string.default_web_client_id)
@@ -130,7 +130,7 @@ fun onGoogleSignInClicked(
             }
         } catch (e: GetCredentialCancellationException) {
             Log.w("Auth", "Google Sign-In flow cancelled or dismissed: ${e.message}", e)
-            onAuthCancelled()
+            onAuthCancelled(e.message)
         } catch (e: Exception) {
             Log.e("Auth", "Google Sign-In failed", e)
             onAuthError(e.localizedMessage ?: "Sign in failed")
@@ -142,7 +142,8 @@ fun onGoogleSignInClicked(
 fun GoogleSignInButton(
     onAuthSuccess: () -> Unit,
     onAuthError: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAuthCancelled: (String?) -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -164,7 +165,10 @@ fun GoogleSignInButton(
                     onAuthError(msg)
                 },
                 scope = scope,
-                onAuthCancelled = { isLoading = false }
+                onAuthCancelled = { detail ->
+                    isLoading = false
+                    onAuthCancelled(detail)
+                }
             )
         },
         enabled = !isLoading,

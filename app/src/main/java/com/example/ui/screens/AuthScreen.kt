@@ -115,7 +115,7 @@ fun AuthScreen(
                 contentDescription = stringResource(R.string.cd_hero_banner),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(190.dp)
+                    .height(156.dp)
                     .clip(MaterialTheme.shapes.large),
                 contentScale = ContentScale.Crop
             )
@@ -126,8 +126,8 @@ fun AuthScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "လူနာများ အေးချမ်းစွာ အနားယူနိုင်ရန်",
@@ -172,7 +172,14 @@ fun AuthScreen(
                     errorMessage = null
                     onAuthSuccess()
                 },
-                onAuthError = { msg -> errorMessage = msg }
+                onAuthError = { msg -> errorMessage = msg },
+                onAuthCancelled = { detail ->
+                    errorMessage = if (!detail.isNullOrBlank()) {
+                        "Google Sign-In မအောင်မြင်ပါ: $detail (GitHub APK ၏ Signing SHA-1 ကို စစ်ဆေးပါ)"
+                    } else {
+                        "Google Sign-In ပယ်ဖျက်ခံရပါသည် — ထပ်မံကြိုးစားကြည့်ပါ။"
+                    }
+                }
             )
 
             Text(
