@@ -25,6 +25,7 @@ jobs:
               exit 1
             fi
           fi
+          python3 -c 'import json; d=json.load(open("app/google-services.json")); print("Configured package:", d["client"][0]["client_info"]["android_client_info"]["package_name"])'
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -49,10 +50,10 @@ jobs:
         run: |
           if [ -f debug.keystore.base64 ]; then
             echo "Restoring debug.keystore from repo debug.keystore.base64"
-            base64 -d debug.keystore.base64 > debug.keystore
+            tr -d '[:space:]' < debug.keystore.base64 | base64 -d > debug.keystore
           elif [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
             echo "Restoring debug.keystore from DEBUG_KEYSTORE_BASE64 secret"
-            printf '%s' "$DEBUG_KEYSTORE_BASE64" | base64 -d > debug.keystore
+            printf '%s' "$DEBUG_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > debug.keystore
           else
             echo "::warning::debug.keystore.base64 not found! Google Sign-In will fail unless this SHA-1 is added to Firebase."
             keytool -genkeypair -v -keystore debug.keystore -storepass android \
